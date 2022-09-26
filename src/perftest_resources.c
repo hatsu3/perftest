@@ -29,6 +29,10 @@
 #include "perftest_resources.h"
 #include "raw_ethernet_resources.h"
 
+#ifdef ENABLE_INTERP
+#include "malloc_interp.h"
+#endif
+
 static enum ibv_wr_opcode opcode_verbs_array[] = {IBV_WR_SEND,IBV_WR_RDMA_WRITE,IBV_WR_RDMA_READ};
 static enum ibv_wr_opcode opcode_atomic_array[] = {IBV_WR_ATOMIC_CMP_AND_SWP,IBV_WR_ATOMIC_FETCH_AND_ADD};
 
@@ -1421,18 +1425,22 @@ int destroy_ctx(struct pingpong_context *ctx,
 		}
 	}
 
+	#ifndef ENABLE_INTERP
 	for (i = 0; i < dereg_counter; i++) {
 		if (ibv_dereg_mr(ctx->mr[i])) {
 			fprintf(stderr, "Failed to deregister MR #%d\n", i+1);
 			test_result = 1;
 		}
 	}
+	#endif
 
 	if (user_param->verb == SEND && user_param->work_rdma_cm == ON && ctx->send_rcredit) {
+		#ifndef ENABLE_INTERP
 		if (ibv_dereg_mr(ctx->credit_mr)) {
 			fprintf(stderr, "Failed to deregister send credit MR\n");
 			test_result = 1;
 		}
+		#endif
 		free(ctx->ctrl_buf);
 		free(ctx->ctrl_sge_list);
 		free(ctx->ctrl_wr);
@@ -1845,7 +1853,11 @@ int create_single_mr(struct pingpong_context *ctx, struct perftest_parameters *u
 #endif
 
 	/* Allocating Memory region and assigning our buffer to it. */
+	#ifdef ENABLE_INTERP
+	ctx->mr[qp_index] = query_user_mr_list(ctx->buf[qp_index]);
+	#else
 	ctx->mr[qp_index] = ibv_reg_mr(ctx->pd, ctx->buf[qp_index], ctx->buff_size, flags);
+	#endif
 
 	if (!ctx->mr[qp_index]) {
 		fprintf(stderr, "Couldn't allocate MR\n");
@@ -1907,8 +1919,10 @@ int create_mr(struct pingpong_context *ctx, struct perftest_parameters *user_par
 	return 0;
 
 destroy_mr:
+    #ifndef ENABLE_INTERP
 	for (i = 0; i < mr_index; i++)
 		ibv_dereg_mr(ctx->mr[i]);
+	#endif
 
 	return FAILURE;
 }
@@ -2271,10 +2285,12 @@ cqs:
 	}
 
 mr:
+	#ifndef ENABLE_INTERP
 	dereg_counter = (user_param->mr_per_qp) ? user_param->num_of_qps : 1;
 
 	for (i = 0; i < dereg_counter; i++)
 		ibv_dereg_mr(ctx->mr[i]);
+	#endif
 
 mkey:
 	#ifdef HAVE_AES_XTS
@@ -3330,7 +3346,12 @@ int ctx_alloc_credit(struct pingpong_context *ctx,
 	ctx->credit_buf = (uint32_t *)ctx->ctrl_buf + user_param->num_of_qps;
 	ctx->credit_cnt = user_param->rx_depth/3;
 
-	ctx->credit_mr = ibv_reg_mr(ctx->pd,ctx->ctrl_buf,buf_size,flags);
+    #ifdef ENABLE_INTERP
+	ctx->credit_mr = query_user_mr_list(ctx->ctrl_buf);
+	#else
+	ctx->credit_mr = ibv_reg_mr(ctx->pd, ctx->ctrl_buf, buf_size, flags);
+	#endif
+
 	if (!ctx->credit_mr) {
 		fprintf(stderr, "Couldn't allocate MR\n");
 		return FAILURE;

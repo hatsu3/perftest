@@ -43,6 +43,10 @@
 #include "multicast_resources.h"
 #include "perftest_communication.h"
 
+#ifdef ENABLE_INTERP
+#include "malloc_interp.h"
+#endif
+
 /******************************************************************************
  *
  ******************************************************************************/
@@ -284,6 +288,12 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	#ifdef ENABLE_INTERP
+	if (register_user_ctx(ctx.context, ctx.pd) < 0) {
+        fprintf(stderr, "Failed to register user context\n");
+        exit(1);
+    }
+	#endif
 
 	/* Set up the Connection. */
 	if (send_set_up_connection(&ctx,&user_param,my_dest,&mcg_params,&user_comm)) {
@@ -592,6 +602,13 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	#ifdef ENABLE_INTERP
+	if (deregister_user_ctx() < 0) {
+		fprintf(stderr, "Failed to deregister user context\n");
+		exit(1);
+	}
+	#endif
+
 	free(my_dest);
 	free(rem_dest);
 
@@ -617,6 +634,16 @@ destroy_cm_context:
 	}
 free_mem:
 	free(rem_dest);
+
+#ifdef ENABLE_INTERP
+dereg_user_ctx:
+	if (deregister_user_ctx() < 0)
+	{
+		fprintf(stderr, "Failed to deregister user context\n");
+        exit(1);
+	}
+#endif
+
 free_my_dest:
 	free(my_dest);
 return_error:

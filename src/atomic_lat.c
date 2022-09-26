@@ -49,6 +49,10 @@
 #include "perftest_resources.h"
 #include "perftest_communication.h"
 
+#ifdef ENABLE_INTERP
+#include "malloc_interp.h"
+#endif
+
 /******************************************************************************
  *
  ******************************************************************************/
@@ -172,6 +176,13 @@ int main(int argc, char *argv[])
 			goto free_mem;
 		}
 	}
+
+	#ifdef ENABLE_INTERP
+	if (register_user_ctx(ctx.context, ctx.pd) < 0) {
+        fprintf(stderr, "Failed to register user context\n");
+        exit(1);
+    }
+	#endif
 
 	/* Set up the Connection. */
 	if (set_up_connection(&ctx,&user_param,my_dest)) {
@@ -298,13 +309,31 @@ int main(int argc, char *argv[])
 		user_comm.rdma_params->work_rdma_cm = OFF;
 		free(my_dest);
 		free(rem_dest);
-		return destroy_ctx(user_comm.rdma_ctx, user_comm.rdma_params);
+		rc = destroy_ctx(user_comm.rdma_ctx,user_comm.rdma_params);
+		
+		#ifdef ENABLE_INTERP
+		if (deregister_user_ctx() < 0) {
+			fprintf(stderr, "Failed to deregister user context\n");
+			exit(1);
+		}
+		#endif
+		
+		return rc;
 	}
 
 	free(my_dest);
 	free(rem_dest);
 
-	return destroy_ctx(&ctx, &user_param);
+	rc = destroy_ctx(&ctx,&user_param);
+
+	#ifdef ENABLE_INTERP
+	if (deregister_user_ctx() < 0) {
+		fprintf(stderr, "Failed to deregister user context\n");
+		exit(1);
+	}
+	#endif
+
+	return rc;
 
 destroy_context:
 	if (destroy_ctx(&ctx,&user_param))
@@ -316,6 +345,16 @@ destroy_cm_context:
 	}
 free_mem:
 	free(my_dest);
+
+#ifdef ENABLE_INTERP
+dereg_user_ctx:
+	if (deregister_user_ctx() < 0)
+	{
+		fprintf(stderr, "Failed to deregister user context\n");
+        exit(1);
+	}
+#endif
+
 free_rem_dest:
 	free(rem_dest);
 return_error:
