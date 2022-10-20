@@ -1433,6 +1433,13 @@ int destroy_ctx(struct pingpong_context *ctx,
 			test_result = 1;
 		}
 	}
+	#else
+	if (user_param->mmap_file != NULL || ctx->is_contig_supported != FAILURE) {
+		fprintf(stdout, "Assertion error: user_param->mmap_file != NULL || ctx->is_contig_supported != FAILURE\n");
+	}
+	for (i = 0; i < dereg_counter; i++) {
+		free(ctx->buf[i]);
+	}
 	#endif
 
 	if (user_param->verb == SEND && user_param->work_rdma_cm == ON && ctx->send_rcredit) {
@@ -1513,7 +1520,9 @@ int destroy_ctx(struct pingpong_context *ctx,
 			if (user_param->use_hugepages) {
 				shmdt(ctx->buf[i]);
 			} else {
+				#ifndef ENABLE_INTERP
 				free(ctx->buf[i]);
+				#endif
 			}
 		}
 	}
