@@ -31,6 +31,7 @@
 
 #ifdef ENABLE_INTERP
 #include "malloc_interp.h"
+#include "software_odp.h"
 #endif
 
 static enum ibv_wr_opcode opcode_verbs_array[] = {IBV_WR_SEND,IBV_WR_RDMA_WRITE,IBV_WR_RDMA_READ};
@@ -2054,7 +2055,12 @@ int ctx_init(struct pingpong_context *ctx, struct perftest_parameters *user_para
 {
 	int i;
 	int num_of_qps = user_param->num_of_qps / 2;
-	int qp_index = 0, dereg_counter;
+	int qp_index = 0;
+
+#ifndef ENABLE_INTERP
+	int dereg_counter;
+#endif
+
 	#ifdef HAVE_AES_XTS
 	int mkey_index = 0, dek_index = 0;
 	#endif
@@ -3345,7 +3351,11 @@ int ctx_alloc_credit(struct pingpong_context *ctx,
 		struct pingpong_dest *my_dest)
 {
 	int buf_size = 2*user_param->num_of_qps*sizeof(uint32_t);
+
+#ifndef ENABLE_INTERP
 	int flags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE;
+#endif
+
 	int i;
 
 	ALLOCATE(ctx->ctrl_buf,uint32_t,2*user_param->num_of_qps);

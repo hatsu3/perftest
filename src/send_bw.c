@@ -45,6 +45,7 @@
 
 #ifdef ENABLE_INTERP
 #include "malloc_interp.h"
+#include "software_odp.h"
 #endif
 
 /******************************************************************************
@@ -628,8 +629,8 @@ destroy_cm_context:
 free_mem:
 	free(rem_dest);
 
+// dereg_user_ctx:
 #ifdef ENABLE_INTERP
-dereg_user_ctx:
 	if (deregister_user_ctx() < 0)
 	{
 		fprintf(stderr, "Failed to deregister user context\n");
