@@ -2166,6 +2166,14 @@ int ctx_init(struct pingpong_context *ctx, struct perftest_parameters *user_para
 	}
 	#endif
 
+	#ifdef ENABLE_INTERP
+	fprintf(stderr, "registering user context\n");
+	if (register_user_ctx(ctx->context, ctx->pd) < 0) {
+        fprintf(stderr, "Failed to register user context\n");
+        exit(1);
+    }
+	#endif
+
 	if (create_mr(ctx, user_param)) {
 		fprintf(stderr, "Failed to create MR\n");
 		goto mkey;

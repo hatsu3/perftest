@@ -185,13 +185,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	#ifdef ENABLE_INTERP
-	if (register_user_ctx(ctx.context, ctx.pd) < 0) {
-        fprintf(stderr, "Failed to register user context\n");
-        exit(1);
-    }
-	#endif
-
 	/* Set up the Connection. */
 	if (set_up_connection(&ctx,&user_param,my_dest)) {
 		fprintf(stderr," Unable to set up socket connection\n");
